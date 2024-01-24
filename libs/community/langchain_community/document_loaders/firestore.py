@@ -11,6 +11,7 @@ FIRESTORE_DEFAULT_DB = "(default)"
 
 
 def _get_firestore_client(
+    project_id: str,
     database: str,
     credentials_path: Optional[str] = None,
 ):
@@ -43,14 +44,14 @@ def _get_firestore_client(
         logger.debug("Initializing Firebase app with ADC: %s", e)
         firebase_admin.initialize_app()
 
-    return Client(database=database, credentials=credentials_path)
+    return Client(database=database, credentials=credentials_path, project=project_id)
 
 
-def _firestore_doc_converter(doc_snapshot) -> Document:
+def _firestore_doc_converter(doc) -> Document:
     """Convert a Firestore document to a Document object."""
     return Document(
-        page_content=doc_snapshot.to_dict(),
-        metadata={**doc_snapshot},
+        page_content=str(doc.to_dict()),
+        metadata={id: doc.id},
     )
 
 
@@ -81,7 +82,9 @@ class FirestoreLoader(BaseLoader):
         self.database = database
 
         # Initialize the Firestore client or use the provided one
-        self.db = firestore_client or _get_firestore_client(database, credentials_path)
+        self.db = firestore_client or _get_firestore_client(
+            project_id, database, credentials_path
+        )
 
         # Create a reference to the collection
         self.collection = self.db.collection(collection_name)
